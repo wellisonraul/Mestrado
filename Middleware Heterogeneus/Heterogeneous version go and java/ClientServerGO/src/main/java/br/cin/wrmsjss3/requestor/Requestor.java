@@ -1,0 +1,46 @@
+package br.cin.wrmsjss3.requestor;
+
+import java.io.IOException;
+
+import br.cin.wrmsjss3.clientrequesthandler.ClientRequestHandler;
+import br.cin.wrmsjss3.requestor.Termination;
+import br.cin.wrmsjss3.marshall.Marshall;
+import br.cin.wrmsjss3.message.Message;
+import br.cin.wrmsjss3.message.MessageBody;
+import br.cin.wrmsjss3.message.MessageHeader;
+import br.cin.wrmsjss3.message.RequestBody;
+import br.cin.wrmsjss3.message.RequestHeader;
+
+public class Requestor {
+
+    public Termination invoke(Invocation invocation) throws IOException, InterruptedException,
+            ClassNotFoundException {
+
+        ClientRequestHandler chr = new ClientRequestHandler(invocation.getIpAddres(), invocation.getPortNumber());
+        Marshall marshaller = new Marshall();
+        Termination termination = new Termination();
+
+        byte[] msgMarshalled;
+        byte[] msgToBeUnmarshalled;
+
+        Message msgUnmarshalled = new Message();
+
+        RequestHeader requestHeader = new RequestHeader("", 0, true, invocation.getObjectId(),
+                invocation.getOperationName());
+        RequestBody requestBody = new RequestBody(invocation.getParameters());
+        MessageHeader messageHeader = new MessageHeader("MIOP", 0, false, 0, 0);
+        MessageBody messageBody = new MessageBody(requestHeader, requestBody, null, null);
+
+        Message msgToBeMarshalled = new Message(messageHeader, messageBody);
+
+        msgMarshalled = marshaller.marshallJson(msgToBeMarshalled);
+
+        chr.send(msgMarshalled);
+
+        msgToBeUnmarshalled = chr.receive();
+
+        msgUnmarshalled = marshaller.unmarshallJson(msgToBeUnmarshalled);
+        termination.setResult(msgUnmarshalled.getMessage_body().getReply_body().getOperation_result().get("Respost"));
+        return termination;
+    }
+}
